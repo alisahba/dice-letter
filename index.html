@@ -9,7 +9,7 @@
 body {
     margin: 0;
     overflow: hidden;
-    background: white;
+    background: black; /* inverted */
     font-family: monospace;
 }
 
@@ -18,10 +18,10 @@ body {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    padding: 20px 40px;
-    font-size: 20px;
-    background: black;
-    color: white;
+    padding: 16px 32px;
+    font-size: 18px;
+    background: white; /* inverted */
+    color: black;
     border: none;
     border-radius: 8px;
 }
@@ -36,32 +36,32 @@ body {
 }
 
 #cube {
-    width: 120px;
-    height: 120px;
+    width: 80px;
+    height: 80px;
     position: relative;
     transform-style: preserve-3d;
 }
 
 .face {
     position: absolute;
-    width: 120px;
-    height: 120px;
-    background: white;
-    color: black;
-    font-size: 60px;
+    width: 80px;
+    height: 80px;
+    background: black; /* inverted */
+    color: white; /* inverted */
+    font-size: 36px;
     font-weight: bold;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-/* faces */
-.front  { transform: rotateY(0deg) translateZ(60px); }
-.right  { transform: rotateY(90deg) translateZ(60px); }
-.back   { transform: rotateY(180deg) translateZ(60px); }
-.left   { transform: rotateY(-90deg) translateZ(60px); }
-.top    { transform: rotateX(90deg) translateZ(60px); }
-.bottom { transform: rotateX(-90deg) translateZ(60px); }
+/* faces (adjusted for new size: 80 / 2 = 40) */
+.front  { transform: rotateY(0deg) translateZ(40px); }
+.right  { transform: rotateY(90deg) translateZ(40px); }
+.back   { transform: rotateY(180deg) translateZ(40px); }
+.left   { transform: rotateY(-90deg) translateZ(40px); }
+.top    { transform: rotateX(90deg) translateZ(40px); }
+.bottom { transform: rotateX(-90deg) translateZ(40px); }
 </style>
 </head>
 
@@ -105,48 +105,45 @@ function loop() {
     let tiltX = Math.max(-40, Math.min(40, gamma));
     let tiltY = Math.max(-40, Math.min(40, beta));
 
-    // --- STATIC FRICTION (real fix for sliding) ---
+    // static friction
     const deadZone = 6;
     if (Math.abs(tiltX) < deadZone) tiltX = 0;
     if (Math.abs(tiltY) < deadZone) tiltY = 0;
 
-    // acceleration (faster, more responsive)
+    // acceleration
     vx += tiltX * 0.12;
     vy += tiltY * 0.12;
 
-    // strong floor friction
+    // friction
     vx *= 0.75;
     vy *= 0.75;
 
-    // stop completely when slow
     if (Math.abs(vx) < 0.03) vx = 0;
     if (Math.abs(vy) < 0.03) vy = 0;
 
     x += vx;
     y += vy;
 
-    // boundaries
-    const maxX = window.innerWidth / 2 - 60;
-    const maxY = window.innerHeight / 2 - 60;
+    const maxX = window.innerWidth / 2 - 40;
+    const maxY = window.innerHeight / 2 - 40;
 
     if (x > maxX) { x = maxX; vx *= -0.3; }
     if (x < -maxX) { x = -maxX; vx *= -0.3; }
     if (y > maxY) { y = maxY; vy *= -0.3; }
     if (y < -maxY) { y = -maxY; vy *= -0.3; }
 
-    // --- TRUE ROLLING ---
-    const rollFactor = 90 / 120;
+    // rolling
+    const rollFactor = 90 / 80;
     rotY += vx * rollFactor;
     rotX -= vy * rollFactor;
 
-    // --- FACE RESISTANCE (subtle "edge friction") ---
+    // subtle face resistance
     function resist(angle) {
         let nearest = Math.round(angle / 90) * 90;
         let diff = nearest - angle;
-        return angle + diff * 0.05; // subtle, not snappy
+        return angle + diff * 0.05;
     }
 
-    // only apply when slow (feels like settling)
     if (Math.abs(vx) + Math.abs(vy) < 0.5) {
         rotX = resist(rotX);
         rotY = resist(rotY);
