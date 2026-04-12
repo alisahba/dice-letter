@@ -9,7 +9,7 @@
 body {
     margin: 0;
     overflow: hidden;
-    background: black; /* inverted */
+    background: black;
     font-family: monospace;
 }
 
@@ -20,7 +20,7 @@ body {
     transform: translate(-50%, -50%);
     padding: 16px 32px;
     font-size: 18px;
-    background: white; /* inverted */
+    background: white;
     color: black;
     border: none;
     border-radius: 8px;
@@ -36,32 +36,32 @@ body {
 }
 
 #cube {
-    width: 80px;
-    height: 80px;
+    width: 64px;
+    height: 64px;
     position: relative;
     transform-style: preserve-3d;
 }
 
 .face {
     position: absolute;
-    width: 80px;
-    height: 80px;
-    background: black; /* inverted */
-    color: white; /* inverted */
-    font-size: 36px;
+    width: 64px;
+    height: 64px;
+    background: black;
+    color: white;
+    font-size: 28px;
     font-weight: bold;
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-/* faces (adjusted for new size: 80 / 2 = 40) */
-.front  { transform: rotateY(0deg) translateZ(40px); }
-.right  { transform: rotateY(90deg) translateZ(40px); }
-.back   { transform: rotateY(180deg) translateZ(40px); }
-.left   { transform: rotateY(-90deg) translateZ(40px); }
-.top    { transform: rotateX(90deg) translateZ(40px); }
-.bottom { transform: rotateX(-90deg) translateZ(40px); }
+/* 64 / 2 = 32 */
+.front  { transform: rotateY(0deg) translateZ(32px); }
+.right  { transform: rotateY(90deg) translateZ(32px); }
+.back   { transform: rotateY(180deg) translateZ(32px); }
+.left   { transform: rotateY(-90deg) translateZ(32px); }
+.top    { transform: rotateX(90deg) translateZ(32px); }
+.bottom { transform: rotateX(-90deg) translateZ(32px); }
 </style>
 </head>
 
@@ -85,14 +85,11 @@ const cube = document.getElementById("cube");
 const btn = document.getElementById("start-btn");
 const scene = document.getElementById("scene");
 
-// position + velocity
 let x = 0, y = 0;
 let vx = 0, vy = 0;
 
-// rotation
 let rotX = 0, rotY = 0;
 
-// gyro
 let beta = 0, gamma = 0;
 
 function handleOrientation(e) {
@@ -105,16 +102,13 @@ function loop() {
     let tiltX = Math.max(-40, Math.min(40, gamma));
     let tiltY = Math.max(-40, Math.min(40, beta));
 
-    // static friction
     const deadZone = 6;
     if (Math.abs(tiltX) < deadZone) tiltX = 0;
     if (Math.abs(tiltY) < deadZone) tiltY = 0;
 
-    // acceleration
     vx += tiltX * 0.12;
     vy += tiltY * 0.12;
 
-    // friction
     vx *= 0.75;
     vy *= 0.75;
 
@@ -124,20 +118,18 @@ function loop() {
     x += vx;
     y += vy;
 
-    const maxX = window.innerWidth / 2 - 40;
-    const maxY = window.innerHeight / 2 - 40;
+    const maxX = window.innerWidth / 2 - 32;
+    const maxY = window.innerHeight / 2 - 32;
 
     if (x > maxX) { x = maxX; vx *= -0.3; }
     if (x < -maxX) { x = -maxX; vx *= -0.3; }
     if (y > maxY) { y = maxY; vy *= -0.3; }
     if (y < -maxY) { y = -maxY; vy *= -0.3; }
 
-    // rolling
-    const rollFactor = 90 / 80;
+    const rollFactor = 90 / 64;
     rotY += vx * rollFactor;
     rotX -= vy * rollFactor;
 
-    // subtle face resistance
     function resist(angle) {
         let nearest = Math.round(angle / 90) * 90;
         let diff = nearest - angle;
@@ -158,7 +150,6 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-// start
 btn.onclick = () => {
     if (typeof DeviceOrientationEvent !== "undefined" &&
         typeof DeviceOrientationEvent.requestPermission === "function") {
