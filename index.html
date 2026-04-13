@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Polished Physics Cubes</title>
+<title>Interactive Cubes</title>
 
 <style>
 body {
@@ -105,7 +105,7 @@ function handleOrientation(e) {
     gamma = e.gamma || 0;
 }
 
-// --- RANDOM SPAWN (safe inside screen) ---
+// spawn
 function spawn() {
     cubes.forEach(c => {
         c.x = Math.random() * (window.innerWidth - size);
@@ -117,38 +117,30 @@ function spawn() {
     });
 }
 
-// --- COLLISION (proper impulse) ---
+// collision
 function collide(a, b) {
-
     let dx = (b.x + size/2) - (a.x + size/2);
     let dy = (b.y + size/2) - (a.y + size/2);
-
     let dist = Math.hypot(dx, dy);
     let minDist = size;
 
     if (dist < minDist) {
-
         let nx = dx / dist;
         let ny = dy / dist;
 
-        // separate
         let overlap = minDist - dist;
         a.x -= nx * overlap / 2;
         a.y -= ny * overlap / 2;
         b.x += nx * overlap / 2;
         b.y += ny * overlap / 2;
 
-        // relative velocity
         let rvx = b.vx - a.vx;
         let rvy = b.vy - a.vy;
 
-        let velAlongNormal = rvx * nx + rvy * ny;
+        let vel = rvx * nx + rvy * ny;
+        if (vel > 0) return;
 
-        if (velAlongNormal > 0) return;
-
-        let bounce = 0.9;
-
-        let impulse = -(1 + bounce) * velAlongNormal / 2;
+        let impulse = -(1.0 + 0.9) * vel / 2;
 
         let ix = impulse * nx;
         let iy = impulse * ny;
@@ -159,6 +151,38 @@ function collide(a, b) {
         b.vy += iy;
     }
 }
+
+// --- TOUCH INTERACTION ---
+scene.addEventListener("touchstart", (e) => {
+    const touch = e.touches[0];
+    const tx = touch.clientX;
+    const ty = touch.clientY;
+
+    cubes.forEach(c => {
+        if (
+            tx >= c.x && tx <= c.x + size &&
+            ty >= c.y && ty <= c.y + size
+        ) {
+            // direction from touch to cube center
+            let cx = c.x + size/2;
+            let cy = c.y + size/2;
+
+            let dx = cx - tx;
+            let dy = cy - ty;
+
+            let dist = Math.hypot(dx, dy) || 1;
+
+            dx /= dist;
+            dy /= dist;
+
+            // strong impulse
+            let force = 25;
+
+            c.vx += dx * force + (Math.random() - 0.5) * 5;
+            c.vy += dy * force + (Math.random() - 0.5) * 5;
+        }
+    });
+});
 
 function loop() {
 
@@ -183,19 +207,13 @@ function loop() {
         c.x += c.vx;
         c.y += c.vy;
 
-        // --- WALL COLLISION (fixed) ---
-        if (c.x < 0) {
-            c.x = 0;
-            c.vx *= -0.8;
-        }
+        // walls
+        if (c.x < 0) { c.x = 0; c.vx *= -0.8; }
         if (c.x > window.innerWidth - size) {
             c.x = window.innerWidth - size;
             c.vx *= -0.8;
         }
-        if (c.y < 0) {
-            c.y = 0;
-            c.vy *= -0.8;
-        }
+        if (c.y < 0) { c.y = 0; c.vy *= -0.8; }
         if (c.y > window.innerHeight - size) {
             c.y = window.innerHeight - size;
             c.vy *= -0.8;
@@ -207,10 +225,8 @@ function loop() {
         c.rotX -= c.vy * rollFactor;
     });
 
-    // collide cubes
     collide(cubes[0], cubes[1]);
 
-    // render
     cubes.forEach(c => {
         c.el.style.transform = `
             translate3d(${c.x}px, ${c.y}px, 0)
