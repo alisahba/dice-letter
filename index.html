@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Interactive Cubes</title>
+<title>Readable Physics Cubes</title>
 
 <style>
 body {
@@ -68,6 +68,8 @@ body {
 <button id="start-btn">Start</button>
 
 <div id="scene">
+
+    <!-- Cube 1 -->
     <div id="cube1" class="cube">
         <div class="face front">F</div>
         <div class="face right">U</div>
@@ -77,6 +79,7 @@ body {
         <div class="face bottom">K</div>
     </div>
 
+    <!-- Cube 2 -->
     <div id="cube2" class="cube">
         <div class="face front">O</div>
         <div class="face right">F</div>
@@ -85,14 +88,15 @@ body {
         <div class="face top">O</div>
         <div class="face bottom">O</div>
     </div>
+
 </div>
 
 <script>
 const size = 64;
 
 const cubes = [
-    { el: cube1, x: 0, y: 0, vx: 0, vy: 0, rotX: 0, rotY: 0 },
-    { el: cube2, x: 0, y: 0, vx: 0, vy: 0, rotX: 0, rotY: 0 }
+    { el: cube1, x: 0, y: 0, vx: 0, vy: 0, rotY: 0 },
+    { el: cube2, x: 0, y: 0, vx: 0, vy: 0, rotY: 0 }
 ];
 
 const btn = document.getElementById("start-btn");
@@ -112,7 +116,6 @@ function spawn() {
         c.y = Math.random() * (window.innerHeight - size);
         c.vx = 0;
         c.vy = 0;
-        c.rotX = 0;
         c.rotY = 0;
     });
 }
@@ -152,34 +155,29 @@ function collide(a, b) {
     }
 }
 
-// --- TOUCH INTERACTION ---
+// touch
 scene.addEventListener("touchstart", (e) => {
-    const touch = e.touches[0];
-    const tx = touch.clientX;
-    const ty = touch.clientY;
+    const t = e.touches[0];
 
     cubes.forEach(c => {
         if (
-            tx >= c.x && tx <= c.x + size &&
-            ty >= c.y && ty <= c.y + size
+            t.clientX >= c.x && t.clientX <= c.x + size &&
+            t.clientY >= c.y && t.clientY <= c.y + size
         ) {
-            // direction from touch to cube center
             let cx = c.x + size/2;
             let cy = c.y + size/2;
 
-            let dx = cx - tx;
-            let dy = cy - ty;
+            let dx = cx - t.clientX;
+            let dy = cy - t.clientY;
 
-            let dist = Math.hypot(dx, dy) || 1;
+            let d = Math.hypot(dx, dy) || 1;
+            dx /= d;
+            dy /= d;
 
-            dx /= dist;
-            dy /= dist;
-
-            // strong impulse
             let force = 25;
 
-            c.vx += dx * force + (Math.random() - 0.5) * 5;
-            c.vy += dy * force + (Math.random() - 0.5) * 5;
+            c.vx += dx * force;
+            c.vy += dy * force;
         }
     });
 });
@@ -219,10 +217,15 @@ function loop() {
             c.vy *= -0.8;
         }
 
-        // rotation
+        // --- UPRIGHT ROTATION ---
         const rollFactor = 90 / size;
+
+        // only horizontal spin
         c.rotY += c.vx * rollFactor;
-        c.rotX -= c.vy * rollFactor;
+
+        // stabilize to readable angles
+        let snap = Math.round(c.rotY / 90) * 90;
+        c.rotY += (snap - c.rotY) * 0.08;
     });
 
     collide(cubes[0], cubes[1]);
@@ -230,7 +233,6 @@ function loop() {
     cubes.forEach(c => {
         c.el.style.transform = `
             translate3d(${c.x}px, ${c.y}px, 0)
-            rotateX(${c.rotX}deg)
             rotateY(${c.rotY}deg)
         `;
     });
