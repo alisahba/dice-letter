@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Natural Cube Physics</title>
+<title>Two Cubes</title>
 
 <style>
 body {
@@ -35,10 +35,11 @@ body {
     align-items: center;
 }
 
-#cube {
+/* shared cube style */
+.cube {
     width: 64px;
     height: 64px;
-    position: relative;
+    position: absolute;
     transform-style: preserve-3d;
 }
 
@@ -55,7 +56,7 @@ body {
     align-items: center;
 }
 
-/* 64 / 2 = 32 */
+/* faces */
 .front  { transform: rotateY(0deg) translateZ(32px); }
 .right  { transform: rotateY(90deg) translateZ(32px); }
 .back   { transform: rotateY(180deg) translateZ(32px); }
@@ -70,7 +71,9 @@ body {
 <button id="start-btn">Start</button>
 
 <div id="scene">
-    <div id="cube">
+
+    <!-- FIRST CUBE -->
+    <div id="cube1" class="cube">
         <div class="face front">F</div>
         <div class="face right">U</div>
         <div class="face back">C</div>
@@ -78,13 +81,26 @@ body {
         <div class="face top">F</div>
         <div class="face bottom">K</div>
     </div>
+
+    <!-- SECOND CUBE -->
+    <div id="cube2" class="cube">
+        <div class="face front">O</div>
+        <div class="face right">F</div>
+        <div class="face back">F</div>
+        <div class="face left">F</div>
+        <div class="face top">O</div>
+        <div class="face bottom">O</div>
+    </div>
+
 </div>
 
 <script>
-const cube = document.getElementById("cube");
+const cube1 = document.getElementById("cube1");
+const cube2 = document.getElementById("cube2");
 const btn = document.getElementById("start-btn");
 const scene = document.getElementById("scene");
 
+// shared physics
 let x = 0, y = 0;
 let vx = 0, vy = 0;
 
@@ -141,8 +157,15 @@ function loop() {
         rotY = resist(rotY);
     }
 
-    cube.style.transform = `
-        translate3d(${x}px, ${y}px, 0)
+    // position cubes with slight offset
+    cube1.style.transform = `
+        translate3d(${x - 40}px, ${y}px, 0)
+        rotateX(${rotX}deg)
+        rotateY(${rotY}deg)
+    `;
+
+    cube2.style.transform = `
+        translate3d(${x + 40}px, ${y}px, 0)
         rotateX(${rotX}deg)
         rotateY(${rotY}deg)
     `;
