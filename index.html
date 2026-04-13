@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Two Cubes</title>
+<title>Colliding Cubes</title>
 
 <style>
 body {
@@ -31,11 +31,10 @@ body {
     height: 100vh;
     perspective: 900px;
     display: none;
-    justify-content: center;
-    align-items: center;
+    position: relative;
 }
 
-/* shared cube style */
+/* cubes */
 .cube {
     width: 64px;
     height: 64px;
@@ -56,7 +55,6 @@ body {
     align-items: center;
 }
 
-/* faces */
 .front  { transform: rotateY(0deg) translateZ(32px); }
 .right  { transform: rotateY(90deg) translateZ(32px); }
 .back   { transform: rotateY(180deg) translateZ(32px); }
@@ -72,7 +70,7 @@ body {
 
 <div id="scene">
 
-    <!-- FIRST CUBE -->
+    <!-- cube 1 -->
     <div id="cube1" class="cube">
         <div class="face front">F</div>
         <div class="face right">U</div>
@@ -82,7 +80,7 @@ body {
         <div class="face bottom">K</div>
     </div>
 
-    <!-- SECOND CUBE -->
+    <!-- cube 2 -->
     <div id="cube2" class="cube">
         <div class="face front">O</div>
         <div class="face right">F</div>
@@ -95,22 +93,76 @@ body {
 </div>
 
 <script>
-const cube1 = document.getElementById("cube1");
-const cube2 = document.getElementById("cube2");
+const cubes = [
+    {
+        el: document.getElementById("cube1"),
+        x: 0, y: 0, vx: 0, vy: 0,
+        rotX: 0, rotY: 0
+    },
+    {
+        el: document.getElementById("cube2"),
+        x: 0, y: 0, vx: 0, vy: 0,
+        rotX: 0, rotY: 0
+    }
+];
+
 const btn = document.getElementById("start-btn");
 const scene = document.getElementById("scene");
-
-// shared physics
-let x = 0, y = 0;
-let vx = 0, vy = 0;
-
-let rotX = 0, rotY = 0;
 
 let beta = 0, gamma = 0;
 
 function handleOrientation(e) {
     beta = e.beta || 0;
     gamma = e.gamma || 0;
+}
+
+// --- RANDOM SPAWN ---
+function spawnCubes() {
+    const size = 64;
+
+    cubes.forEach(c => {
+        c.x = (Math.random() - 0.5) * (window.innerWidth - size);
+        c.y = (Math.random() - 0.5) * (window.innerHeight - size);
+        c.vx = 0;
+        c.vy = 0;
+        c.rotX = 0;
+        c.rotY = 0;
+    });
+}
+
+// --- COLLISION ---
+function resolveCollision(a, b) {
+    const size = 64;
+
+    let dx = b.x - a.x;
+    let dy = b.y - a.y;
+
+    if (Math.abs(dx) < size && Math.abs(dy) < size) {
+
+        // push apart
+        let overlapX = size - Math.abs(dx);
+        let overlapY = size - Math.abs(dy);
+
+        if (overlapX < overlapY) {
+            let push = overlapX / 2 * Math.sign(dx);
+            a.x -= push;
+            b.x += push;
+
+            // bounce
+            let temp = a.vx;
+            a.vx = b.vx * 0.8;
+            b.vx = temp * 0.8;
+
+        } else {
+            let push = overlapY / 2 * Math.sign(dy);
+            a.y -= push;
+            b.y += push;
+
+            let temp = a.vy;
+            a.vy = b.vy * 0.8;
+            b.vy = temp * 0.8;
+        }
+    }
 }
 
 function loop() {
@@ -122,57 +174,52 @@ function loop() {
     if (Math.abs(tiltX) < deadZone) tiltX = 0;
     if (Math.abs(tiltY) < deadZone) tiltY = 0;
 
-    vx += tiltX * 0.12;
-    vy += tiltY * 0.12;
+    cubes.forEach(c => {
 
-    vx *= 0.75;
-    vy *= 0.75;
+        // movement
+        c.vx += tiltX * 0.12;
+        c.vy += tiltY * 0.12;
 
-    if (Math.abs(vx) < 0.03) vx = 0;
-    if (Math.abs(vy) < 0.03) vy = 0;
+        c.vx *= 0.75;
+        c.vy *= 0.75;
 
-    x += vx;
-    y += vy;
+        if (Math.abs(c.vx) < 0.03) c.vx = 0;
+        if (Math.abs(c.vy) < 0.03) c.vy = 0;
 
-    const maxX = window.innerWidth / 2 - 32;
-    const maxY = window.innerHeight / 2 - 32;
+        c.x += c.vx;
+        c.y += c.vy;
 
-    if (x > maxX) { x = maxX; vx *= -0.3; }
-    if (x < -maxX) { x = -maxX; vx *= -0.3; }
-    if (y > maxY) { y = maxY; vy *= -0.3; }
-    if (y < -maxY) { y = -maxY; vy *= -0.3; }
+        // bounds
+        const maxX = window.innerWidth / 2 - 32;
+        const maxY = window.innerHeight / 2 - 32;
 
-    const rollFactor = 90 / 64;
-    rotY += vx * rollFactor;
-    rotX -= vy * rollFactor;
+        if (c.x > maxX) { c.x = maxX; c.vx *= -0.3; }
+        if (c.x < -maxX) { c.x = -maxX; c.vx *= -0.3; }
+        if (c.y > maxY) { c.y = maxY; c.vy *= -0.3; }
+        if (c.y < -maxY) { c.y = -maxY; c.vy *= -0.3; }
 
-    function resist(angle) {
-        let nearest = Math.round(angle / 90) * 90;
-        let diff = nearest - angle;
-        return angle + diff * 0.05;
-    }
+        // rotation
+        const rollFactor = 90 / 64;
+        c.rotY += c.vx * rollFactor;
+        c.rotX -= c.vy * rollFactor;
+    });
 
-    if (Math.abs(vx) + Math.abs(vy) < 0.5) {
-        rotX = resist(rotX);
-        rotY = resist(rotY);
-    }
+    // collision between cubes
+    resolveCollision(cubes[0], cubes[1]);
 
-    // position cubes with slight offset
-    cube1.style.transform = `
-        translate3d(${x - 40}px, ${y}px, 0)
-        rotateX(${rotX}deg)
-        rotateY(${rotY}deg)
-    `;
-
-    cube2.style.transform = `
-        translate3d(${x + 40}px, ${y}px, 0)
-        rotateX(${rotX}deg)
-        rotateY(${rotY}deg)
-    `;
+    // render
+    cubes.forEach(c => {
+        c.el.style.transform = `
+            translate3d(${c.x}px, ${c.y}px, 0)
+            rotateX(${c.rotX}deg)
+            rotateY(${c.rotY}deg)
+        `;
+    });
 
     requestAnimationFrame(loop);
 }
 
+// start
 btn.onclick = () => {
     if (typeof DeviceOrientationEvent !== "undefined" &&
         typeof DeviceOrientationEvent.requestPermission === "function") {
@@ -188,7 +235,8 @@ btn.onclick = () => {
 
 function start() {
     btn.style.display = "none";
-    scene.style.display = "flex";
+    scene.style.display = "block";
+    spawnCubes(); // random start
     window.addEventListener("deviceorientation", handleOrientation);
     loop();
 }
