@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Colliding Cubes</title>
+<title>Polished Physics Cubes</title>
 
 <style>
 body {
@@ -34,7 +34,6 @@ body {
     position: relative;
 }
 
-/* cubes */
 .cube {
     width: 64px;
     height: 64px;
@@ -69,8 +68,6 @@ body {
 <button id="start-btn">Start</button>
 
 <div id="scene">
-
-    <!-- cube 1 -->
     <div id="cube1" class="cube">
         <div class="face front">F</div>
         <div class="face right">U</div>
@@ -80,7 +77,6 @@ body {
         <div class="face bottom">K</div>
     </div>
 
-    <!-- cube 2 -->
     <div id="cube2" class="cube">
         <div class="face front">O</div>
         <div class="face right">F</div>
@@ -89,21 +85,14 @@ body {
         <div class="face top">O</div>
         <div class="face bottom">O</div>
     </div>
-
 </div>
 
 <script>
+const size = 64;
+
 const cubes = [
-    {
-        el: document.getElementById("cube1"),
-        x: 0, y: 0, vx: 0, vy: 0,
-        rotX: 0, rotY: 0
-    },
-    {
-        el: document.getElementById("cube2"),
-        x: 0, y: 0, vx: 0, vy: 0,
-        rotX: 0, rotY: 0
-    }
+    { el: cube1, x: 0, y: 0, vx: 0, vy: 0, rotX: 0, rotY: 0 },
+    { el: cube2, x: 0, y: 0, vx: 0, vy: 0, rotX: 0, rotY: 0 }
 ];
 
 const btn = document.getElementById("start-btn");
@@ -116,13 +105,11 @@ function handleOrientation(e) {
     gamma = e.gamma || 0;
 }
 
-// --- RANDOM SPAWN ---
-function spawnCubes() {
-    const size = 64;
-
+// --- RANDOM SPAWN (safe inside screen) ---
+function spawn() {
     cubes.forEach(c => {
-        c.x = (Math.random() - 0.5) * (window.innerWidth - size);
-        c.y = (Math.random() - 0.5) * (window.innerHeight - size);
+        c.x = Math.random() * (window.innerWidth - size);
+        c.y = Math.random() * (window.innerHeight - size);
         c.vx = 0;
         c.vy = 0;
         c.rotX = 0;
@@ -130,38 +117,46 @@ function spawnCubes() {
     });
 }
 
-// --- COLLISION ---
-function resolveCollision(a, b) {
-    const size = 64;
+// --- COLLISION (proper impulse) ---
+function collide(a, b) {
 
-    let dx = b.x - a.x;
-    let dy = b.y - a.y;
+    let dx = (b.x + size/2) - (a.x + size/2);
+    let dy = (b.y + size/2) - (a.y + size/2);
 
-    if (Math.abs(dx) < size && Math.abs(dy) < size) {
+    let dist = Math.hypot(dx, dy);
+    let minDist = size;
 
-        // push apart
-        let overlapX = size - Math.abs(dx);
-        let overlapY = size - Math.abs(dy);
+    if (dist < minDist) {
 
-        if (overlapX < overlapY) {
-            let push = overlapX / 2 * Math.sign(dx);
-            a.x -= push;
-            b.x += push;
+        let nx = dx / dist;
+        let ny = dy / dist;
 
-            // bounce
-            let temp = a.vx;
-            a.vx = b.vx * 0.8;
-            b.vx = temp * 0.8;
+        // separate
+        let overlap = minDist - dist;
+        a.x -= nx * overlap / 2;
+        a.y -= ny * overlap / 2;
+        b.x += nx * overlap / 2;
+        b.y += ny * overlap / 2;
 
-        } else {
-            let push = overlapY / 2 * Math.sign(dy);
-            a.y -= push;
-            b.y += push;
+        // relative velocity
+        let rvx = b.vx - a.vx;
+        let rvy = b.vy - a.vy;
 
-            let temp = a.vy;
-            a.vy = b.vy * 0.8;
-            b.vy = temp * 0.8;
-        }
+        let velAlongNormal = rvx * nx + rvy * ny;
+
+        if (velAlongNormal > 0) return;
+
+        let bounce = 0.9;
+
+        let impulse = -(1 + bounce) * velAlongNormal / 2;
+
+        let ix = impulse * nx;
+        let iy = impulse * ny;
+
+        a.vx -= ix;
+        a.vy -= iy;
+        b.vx += ix;
+        b.vy += iy;
     }
 }
 
@@ -176,36 +171,44 @@ function loop() {
 
     cubes.forEach(c => {
 
-        // movement
         c.vx += tiltX * 0.12;
         c.vy += tiltY * 0.12;
 
-        c.vx *= 0.75;
-        c.vy *= 0.75;
+        c.vx *= 0.78;
+        c.vy *= 0.78;
 
-        if (Math.abs(c.vx) < 0.03) c.vx = 0;
-        if (Math.abs(c.vy) < 0.03) c.vy = 0;
+        if (Math.abs(c.vx) < 0.02) c.vx = 0;
+        if (Math.abs(c.vy) < 0.02) c.vy = 0;
 
         c.x += c.vx;
         c.y += c.vy;
 
-        // bounds
-        const maxX = window.innerWidth / 2 - 32;
-        const maxY = window.innerHeight / 2 - 32;
-
-        if (c.x > maxX) { c.x = maxX; c.vx *= -0.3; }
-        if (c.x < -maxX) { c.x = -maxX; c.vx *= -0.3; }
-        if (c.y > maxY) { c.y = maxY; c.vy *= -0.3; }
-        if (c.y < -maxY) { c.y = -maxY; c.vy *= -0.3; }
+        // --- WALL COLLISION (fixed) ---
+        if (c.x < 0) {
+            c.x = 0;
+            c.vx *= -0.8;
+        }
+        if (c.x > window.innerWidth - size) {
+            c.x = window.innerWidth - size;
+            c.vx *= -0.8;
+        }
+        if (c.y < 0) {
+            c.y = 0;
+            c.vy *= -0.8;
+        }
+        if (c.y > window.innerHeight - size) {
+            c.y = window.innerHeight - size;
+            c.vy *= -0.8;
+        }
 
         // rotation
-        const rollFactor = 90 / 64;
+        const rollFactor = 90 / size;
         c.rotY += c.vx * rollFactor;
         c.rotX -= c.vy * rollFactor;
     });
 
-    // collision between cubes
-    resolveCollision(cubes[0], cubes[1]);
+    // collide cubes
+    collide(cubes[0], cubes[1]);
 
     // render
     cubes.forEach(c => {
@@ -219,7 +222,6 @@ function loop() {
     requestAnimationFrame(loop);
 }
 
-// start
 btn.onclick = () => {
     if (typeof DeviceOrientationEvent !== "undefined" &&
         typeof DeviceOrientationEvent.requestPermission === "function") {
@@ -236,7 +238,7 @@ btn.onclick = () => {
 function start() {
     btn.style.display = "none";
     scene.style.display = "block";
-    spawnCubes(); // random start
+    spawn();
     window.addEventListener("deviceorientation", handleOrientation);
     loop();
 }
